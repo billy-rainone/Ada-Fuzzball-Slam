@@ -20,8 +20,8 @@
 
 
 
-const VP_WIDTH = 920, VP_HEIGHT = 690; //defined global const variables to hold the (vp) details (e.g., size, etc.)
-var viewport, engine, world, body; //defined global variables to hold the game's viewport and the 'matter' engine components
+const vp_width = 920, vp_height = 690; //defined global const variables to hold the (vp) details (e.g., size, etc.)
+var engine, world, body; //defined global variables to hold the game's viewport and the 'matter' engine components
 
 
 function apply_velocity() {
