@@ -21,7 +21,7 @@
 
 
 var vp_width = 920, vp_height = 690; //defined global variables to hold the defined viewport (vp) details (e.g., size, etc.)
-var engine, world, body; //defined global variables to hold the 'matter' engine components
+var viewport, engine, world, body; //defined global variables to hold the game's viewport and the 'matter' engine components
 
 
 function apply_velocity() {
