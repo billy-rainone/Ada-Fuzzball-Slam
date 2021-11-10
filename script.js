@@ -18,11 +18,26 @@
 //task 3.1 - expand your 2.3 task so that your rectangle changes colour during each frame update; reflect on what you have done so far and consider and test ways this could be achieved and implemented as simply as possible 
 //task 3.2 - continue to expand your 2.3 (and now 3.1) task so that your rectangle cycles through all shades of the same colour (e.g., from the darkest to the lightest shade); reflect on what you have already completed and consider and test ways this could be achieved and implemented as simply as possible; for your recall and ease of reference, colour values start from 00 (darkest, i.e., no white added) to FF (lightest, i.e., full white added) in hex or 00 - 255 in decimal
 
+//CONSTANTS
 
+//viewport constants
+const VP_WIDTH = 920, VP_HEIGHT = 690; //defined global const variables to hold the (vp) details (e.g., size, etc.)
 
-const vp_width = 920, vp_height = 690; //defined global const variables to hold the (vp) details (e.g., size, etc.)
+//player constants
+const P_COLOUR = 'green'
+const P_SPEED = 1;
+
+//background colour constants
+const BG_COLOUR_R = get_random(0,55); 
+const BG_COLOUR_G = get_random(0,55);
+const BG_COLOUR_B = get_random(0,55);
+
+//engine constants
+const FPS = 60;
+
 var engine, world, body; //defined global variables to hold the game's viewport and the 'matter' engine components
-
+var viewport;
+var p;
 
 function apply_velocity() {
 };
@@ -37,15 +52,108 @@ function apply_force() {
 
 
 function get_random(min, max) {
+	//returns a random number in the range of min(int) and max(int)
+	//min(int): the lowest possible value
+	//max(int): the highest possible value
+	return Math.floor((Math.random() * max) + min);
 }
 
+class Actor {
+	constructor(x, y, width, height, grav=true, r=get_random(90, 255), g=get_random(90, 255), b=get_random(90, 255)) {
+		//coords
+		this.x = x;
+		this.y = y;
+		this.w = width;
+		this.h = height;
+		//colours 
+		this.r = r;
+		this.g= g;
+		this.b = b;
+		var options;
+		//matter :D stuff
+		console.log(grav, x)
+		if (grav != 0) {
+		options = {
+			restitution: 0.09,
+			isStatic: false
+		}
+	}
+		else { //this is for the floor 
+			options = {
+				restitution: 0.0,
+				isStatic: true
+			}
+		}
+		this.body = Matter.Bodies.rectangle(x, y, width, height, options);
+		Matter.World.add(world, this.body);
+		this.pos = this.body.position;
+	}
+
+	draw_actor() {
+		let pos = this.body.position;
+		rectMode(CENTER);
+		let c = color(this.r, this.g, this.b);
+		fill(c);
+		rect(this.pos.x, this.pos.y, this.w, this.h);
+	}
+}
+
+class Player extends Actor{
+	constructor(x, y, width, height, grav=true, r=get_random(90, 255), g=get_random(90, 255), b=get_random(90, 255)) {
+		//the player class is a subclass of actor (any character in the game)
+		//it is a moving character that the player controls and thus shares a lot of similarities with actors, but with extra functionality.
+		
+		super(x, y, width, height, r, g, b,);
+	}
+
+	player_move(dir, amt){
+		//move the player a set amount(amt) in a set direction(dir).
+		//dir will take either "x" or "y" and amt will take any number, pos or neg to allow for all the directions.
+		if (dir == "x") {
+			if (this.pos.x + this.w  + amt < VP_WIDTH) { //check for if actor attempts to go off screen
+				if (this.pos.x + amt > 0) {
+					this.pos.x += amt;
+				}
+			}
+		}
+		else {
+			if (this.pos.y + this.h + amt < VP_HEIGHT) { //same check different coord value
+				if (this.pos.y + amt > 0) {
+					this.pos.y += amt;
+				}
+			}
+		}
+	}
+}
 
 function preload() {
 	//a 'p5' defined function runs automatically and used to handle asynchronous loading of external files in a blocking way; once complete
 	//the 'setup' function is called (automatically)
 }
 
-
+function key_press() {
+	//a simple method to add listening events for if a key is pressed and then to direct the code to the appropriate action through selection
+	document.addEventListener('keydown', function (event) {
+		switch (event.key) {
+		case('w'):
+			p.player_move("y", (P_SPEED - P_SPEED*2));
+			break;
+		
+		case ('s'):
+			p.player_move("y", P_SPEED);
+			break;
+		
+		case('a'): 
+			p.player_move("x", (P_SPEED - P_SPEED*2));
+			break;
+		  
+		case('d'):
+			  p.player_move("x", P_SPEED);
+			  break;
+		}
+		  
+	});
+}
 function setup() {
 	//a 'p5' defined function runs automatically once the preload function is complete
 	viewport = createCanvas(VP_WIDTH, VP_HEIGHT); //set the viewport (canvas) size
@@ -56,24 +164,29 @@ function setup() {
 	world = engine.world; //the instance of the world (contains all bodies, constraints, etc) to be simulated by the engine
 	body = Matter.Body; //the module that contains all 'matter' methods for creating and manipulating 'body' models a 'matter' body 
 	//is a 'rigid' body that can be simulated by the Matter.Engine; generally defined as rectangles, circles and other polygons)
+	p = new Player(100, 50, 60, 50, true, get_random(30, 90), get_random(30, 90), get_random(30, 90));
+	floor = new Actor(VP_WIDTH/2, VP_HEIGHT-80, VP_WIDTH, 150, false, get_random(30, 90), get_random(30, 90), get_random(30, 90));
 
-
-	frameRate(1); //specifies the number of (refresh) frames displayed every second
+	frameRate(FPS); //specifies the number of (refresh) frames displayed every second
+	key_press();
 
 }
-
 
 function paint_background() {
 	//a defined function to 'paint' the default background objects & colours for the world per frame
-	background('#a0a1a2'); //use a 'hex' (denoted with '#') RGB colour (red: a0, green: a1, blue: a2 - appears as a grey colour) to set the background
+	background(BG_COLOUR_R, BG_COLOUR_G, BG_COLOUR_B); //use a 'hex' (denoted with '#') RGB colour (red: a0, green: a1, blue: a2 - appears as a grey colour) to set the background
 }
-
 
 function paint_assets() {
 	//a defined function to 'paint' assets to the canvas
+	p.draw_actor();
+	floor.draw_actor();
 }
 
 
 function draw() {
 	//a 'p5' defined function that runs automatically and continously (up to your system's hardware/os limit) and based on any specified frame rate
+	Matter.Engine.update(engine);
+	paint_background();
+	paint_assets();
 }
