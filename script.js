@@ -110,7 +110,7 @@ class Player extends Actor{
 		//move the player a set amount(amt) in a set direction(dir).
 		//dir will take either "x" or "y" and amt will take any number, pos or neg to allow for all the directions.
 		if (dir == "x") {
-			if (this.pos.x + this.w  + amt < VP_WIDTH) { //check for if actor attempts to go off screen
+			if (this.pos.x + this.w  + amt < VP_WIDTH) { //check for if actor attempts to go off screen is broken completely tho so dont worry bout it
 				if (this.pos.x + amt > 0) {
 					this.pos.x += amt;
 				}
@@ -119,6 +119,9 @@ class Player extends Actor{
 		else {
 			if (this.pos.y + this.h + amt < VP_HEIGHT) { //same check different coord value
 				if (this.pos.y + amt > 0) {
+					if (Matter.Bounds.overlaps(this.body.bounds, floor.body.bounds)) {
+						this.pos.y += 1;
+					}
 					this.pos.y += amt;
 				}
 			}
