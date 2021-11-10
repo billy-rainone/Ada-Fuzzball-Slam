@@ -84,13 +84,13 @@ class Actor {
 				isStatic: true
 			}
 		}
+		
 		this.body = Matter.Bodies.rectangle(x, y, width, height, options);
 		Matter.World.add(world, this.body);
 		this.pos = this.body.position;
 	}
 
 	draw_actor() {
-		let pos = this.body.position;
 		rectMode(CENTER);
 		let c = color(this.r, this.g, this.b);
 		fill(c);
@@ -120,9 +120,12 @@ class Player extends Actor{
 			if (this.pos.y + this.h + amt < VP_HEIGHT) { //same check different coord value
 				if (this.pos.y + amt > 0) {
 					if (Matter.Bounds.overlaps(this.body.bounds, floor.body.bounds)) {
-						this.pos.y += 1;
+						console.log("hey man get off the floor hahaha");
+						this.pos.y--;
 					}
-					this.pos.y += amt;
+					else {
+						this.pos.y += amt; 
+					}
 				}
 			}
 		}
@@ -138,14 +141,6 @@ function key_press() {
 	//a simple method to add listening events for if a key is pressed and then to direct the code to the appropriate action through selection
 	document.addEventListener('keydown', function (event) {
 		switch (event.key) {
-		case('w'):
-			p.player_move("y", (P_SPEED - P_SPEED*2));
-			break;
-		
-		case ('s'):
-			p.player_move("y", P_SPEED);
-			break;
-		
 		case('a'): 
 			p.player_move("x", (P_SPEED - P_SPEED*2));
 			break;
