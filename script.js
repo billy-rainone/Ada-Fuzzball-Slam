@@ -43,7 +43,7 @@ var floor;
 var wall;
 var bullet;
 var bullet_ls = [];
-
+var notinteractable = 0x0001, interactable = 0x0002;
 var dir = "right";
 var bulx;
 var buly;
@@ -145,7 +145,8 @@ class Actor {
 			restitution: 0,
 			isStatic: false,
 			density: 0.95,
-			inertia: Infinity //prevents rotation in the physics engine 
+			inertia: Infinity //prevents rotation in the physics engine
+
 		};
 
 		
@@ -163,6 +164,8 @@ class Actor {
 			case (5):
 				this.pos.x++;
 				break;
+			case (3):
+				shoot("left", this);
 		}
 		let wall_block_ls = [];
 		wall_block_ls = Matter.Composite.allBodies(wall.composite);
@@ -182,7 +185,7 @@ class Actor {
 	}
 }
 
-
+//PREVENT X COORDS FROM LEAVING X RANGE todo
 //this is the enemy 
 class Player extends Actor{
 	constructor(x, y, width, height, r=get_random(90, 255), g=get_random(90, 255), b=get_random(90, 255)) {
@@ -209,17 +212,36 @@ class Player extends Actor{
 	}
 }
 class Bullet extends Actor{
-	constructor(x, y, width, height, p, r=get_random(90, 255), g=get_random(90, 255), b=get_random(90, 255)) {
+	constructor(x, y, width, height, obj, r=get_random(90, 255), g=get_random(90, 255), b=get_random(90, 255)) {
 		//the player class is a subclass of actor (any character in the game)
 		//it is a moving character that the player controls and thus shares a lot of similarities with actors, but with extra functionality.
 		super(x, y, width, height, r, g, b);
-		this.p = p;
+		this.obj = obj;
+		if (this.obj == p) {
+			Matter.Body.setVelocity(this.body, {x: 10, y: -15});
+		}
+		else {
+			Matter.Body.setVelocity(this.body, {x: -10, y: -15});
+		}
 	}
 }
 
 function preload() {
 	//a 'p5' defined function runs automatically and used to handle asynchronous loading of external files in a blocking way; once complete
 	//the 'setup' function is called (automatically)
+}
+
+function shoot(dir, obj) {
+	if (dir == "right") {
+		bulx = obj.pos.x + 50;
+		buly = obj.pos.y - 50;
+	}
+	else {
+		bulx = obj.pos.x - 50;
+		buly = obj.pos.y - 50;
+	}
+	bullet = new Bullet(bulx, buly, 5, 5, obj);
+	bullet_ls.push(bullet);
 }
 
 function key_press() {
@@ -238,21 +260,14 @@ function key_press() {
 			break;
 
 		case(' '):
-			if (dir == "right") {
-				bulx = p.pos.x + 50;
-				buly = p.pos.y - 50;
-			}
-			else {
-				bulx = p.pos.x - 50;
-				buly = p.pos.y - 50;
-			}
-			bullet = new Bullet(bulx, buly, 5, 5, p);
-			bullet_ls.push(bullet);
+			shoot(dir, p);
 			break;
 		}
 		  
 	});
 }
+
+//todo make shoot and move function more general - just pass through obj
 
 function setup() {
 	//a 'p5' defined function runs automatically once the preload function is complete
