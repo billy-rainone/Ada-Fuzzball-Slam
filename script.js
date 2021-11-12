@@ -26,7 +26,13 @@ const VP_WIDTH = 920, VP_HEIGHT = 690; //defined global const variables to hold 
 //player constants
 
 const P_SPEED = 2;
-
+const P_SIZE = 30;
+var arc_x = 5;
+var arc_y = 10;
+var e_xvel = -5;
+var e_yvel = 15;
+var p_score = 0;
+var e_score = 0;
 //background colour constants
 const BG_COLOUR_R = get_random(0,55); 
 const BG_COLOUR_G = get_random(0,55);
@@ -40,6 +46,8 @@ var viewport;
 var p;
 var e;
 var floor;
+var cooldown = 0;
+var e_cooldown = 0;
 var wall;
 var bullet;
 var bullet_ls = [];
@@ -89,10 +97,10 @@ class Wall {
 	this.g = g;
 	this.b = b;
 	let options = {
-		restitution: 0.01,
+		restitution: 0.00,
 		isStatic: true,
 		density: 0.99,
-		friction: 0.20
+		friction: 0.99
 	};
 	this.composite = Matter.Composites.stack(
 	  xx,
@@ -145,6 +153,7 @@ class Actor {
 			restitution: 0,
 			isStatic: false,
 			density: 0.95,
+			friction: 0.99,
 			inertia: Infinity //prevents rotation in the physics engine
 
 		};
@@ -165,17 +174,34 @@ class Actor {
 				this.pos.x++;
 				break;
 			case (3):
-				shoot("left", this);
+				if (e_cooldown <= 0) {
+				shoot("left", this, e_xvel, e_yvel);
+				e_cooldown = 30;
+				}
 		}
-		let wall_block_ls = [];
-		wall_block_ls = Matter.Composite.allBodies(wall.composite);
-		for (let i =0; i < wall_block_ls.length; i++) {
-		if (Matter.Bounds.overlaps(this.body.bounds, wall_block_ls[i].bounds)) {
-			this.pos.x += 5;
-			console.log("naughty bot");
+		sel = get_random(0, e_xvel) 
+			switch (sel) {
+				case (e_xvel):
+					//console.log(e_xvel)
+					e_xvel--;
+					break;
+				case (e_xvel+1):
+					e_xvel++;
+					break;
+			}
+		sel = get_random(0, e_yvel)
+			switch (sel) { 
+				case (e_yvel):
+					e_yvel--;
+					break;
+				case (e_yvel + 1):
+					e_yvel++;
+					break;
+			}
+		
 		}
-	}
-	}
+	
+	
 	//this is our player
 	draw_actor() { 
 		rectMode(CENTER);
@@ -183,8 +209,21 @@ class Actor {
 		fill(c);
 		rect(this.pos.x, this.pos.y, this.w, this.h);
 	}
-}
 
+	wall_check(pushval, forbul = false, obj=wall) {
+		let wall_block_ls = [];
+		wall_block_ls = Matter.Composite.allBodies(obj.composite);
+		for (let i =0; i < wall_block_ls.length; i++) {
+		if (Matter.Bounds.overlaps(this.body.bounds, wall_block_ls[i].bounds)) {
+			this.pos.x += pushval;
+			if (forbul) {
+				let vals = [true, wall_block_ls[i], i]
+				return vals;
+			}
+			}
+		}
+	}
+}
 //PREVENT X COORDS FROM LEAVING X RANGE todo
 //this is the enemy 
 class Player extends Actor{
@@ -209,21 +248,50 @@ class Player extends Actor{
 		else {
 			this.pos.y += amt; 
 		}
+		
 	}
+
+	player_wall_check() {
+	//prevents player crossing border
+	if (this.pos.x + this.w/2 > VP_WIDTH/2) {
+		this.pos.x = VP_WIDTH/2 - this.w/2 - 5;
+
+		}
+	}
+	
 }
 class Bullet extends Actor{
-	constructor(x, y, width, height, obj, r=get_random(90, 255), g=get_random(90, 255), b=get_random(90, 255)) {
+	constructor(x, y, width, height, obj, xvel, yvel, r=get_random(90, 255), g=get_random(90, 255), b=get_random(90, 255)) {
 		//the player class is a subclass of actor (any character in the game)
 		//it is a moving character that the player controls and thus shares a lot of similarities with actors, but with extra functionality.
 		super(x, y, width, height, r, g, b);
 		this.obj = obj;
-		if (this.obj == p) {
-			Matter.Body.setVelocity(this.body, {x: 10, y: -15});
+		this.destroyed = false;
+		this.block_to_destroy = "no";
+		//if (this.obj == p) {
+		if (this.obj == e) {
+			console.log(xvel, yvel);
 		}
-		else {
-			Matter.Body.setVelocity(this.body, {x: -10, y: -15});
-		}
+			Matter.Body.setVelocity(this.body, {x: xvel, y: -yvel});
+		//}
+		//else {
+			//Matter.Body.setVelocity(this.body, {x: -xvel, y: -yvel});
+		//}
 	}
+
+	collide(obj) {
+		let toDelete = this.wall_check(0, true, obj);
+		if (toDelete != undefined) {
+			if (toDelete[0] == true) {
+				Matter.World.remove(world, this.body);
+				this.destroyed = true;
+				console.log(toDelete[1]);
+				this.block_to_destroy=toDelete[1];
+				this.block_idx = toDelete[2];
+				Matter.World.remove(world, this.block_to_destroy);
+				}
+			}
+		}
 }
 
 function preload() {
@@ -231,16 +299,16 @@ function preload() {
 	//the 'setup' function is called (automatically)
 }
 
-function shoot(dir, obj) {
+function shoot(dir, obj, xvel=arc_x, yvel=arc_y) {
 	if (dir == "right") {
-		bulx = obj.pos.x + 50;
+		bulx = obj.pos.x; //+ 50;
 		buly = obj.pos.y - 50;
 	}
 	else {
-		bulx = obj.pos.x - 50;
+		bulx = obj.pos.x; //- 50;
 		buly = obj.pos.y - 50;
 	}
-	bullet = new Bullet(bulx, buly, 5, 5, obj);
+	bullet = new Bullet(bulx, buly, 5, 5, obj, xvel, yvel);
 	bullet_ls.push(bullet);
 }
 
@@ -260,7 +328,30 @@ function key_press() {
 			break;
 
 		case(' '):
-			shoot(dir, p);
+		if (cooldown <= 0) { 
+			shoot(dir, p, arc_x, arc_y);
+			cooldown = 30;
+			break;
+		}
+		case ('ArrowUp'):
+			if (arc_y < 25) {
+				arc_y++;
+			}
+			break;
+		case ('ArrowDown'):
+			if (arc_y > 0) { 
+				arc_y--;
+			}
+			break;
+		case ('ArrowRight'):
+			if (arc_x < 25) { 
+				arc_x++;
+			}
+			break;
+		case ('ArrowLeft'):
+			if (arc_x > 0) { 
+				arc_x--;
+			}
 			break;
 		}
 		  
@@ -273,7 +364,7 @@ function setup() {
 	//a 'p5' defined function runs automatically once the preload function is complete
 	viewport = createCanvas(VP_WIDTH, VP_HEIGHT); //set the viewport (canvas) size
 	viewport.parent("viewport_container"); //attach the created canvas to the target div
-	
+	//cooldown = 0
 	//enable the matter engine
 	engine = Matter.Engine.create(); //the 'engine' is a controller that manages updating the 'simulation' of the world
 	world = engine.world; //the instance of the world (contains all bodies, constraints, etc) to be simulated by the engine
@@ -281,10 +372,10 @@ function setup() {
 	engine.positionIterations = 10;
 	engine.velocityIterations = 10;
 	//is a 'rigid' body that can be simulated by the Matter.Engine; generally defined as rectangles, circles and other polygons)
-	wall = new Wall(VP_WIDTH/2, VP_HEIGHT/2+40, 2, 20, 10, 10, true, 10);
-	p = new Player(50, 400, 60, 50, get_random(30, 90), get_random(30, 90), get_random(30, 90));
-	e = new Actor(VP_WIDTH-50, 400, 60, 50);
-	floor = new Wall(0, VP_HEIGHT/2+250, 50, 5, 10, 10, true, 20); //see draw for reasoning on floor fix
+	wall = new Wall(VP_WIDTH/2, VP_HEIGHT/2, 2, 20, 10, 10, true, 10);
+	p = new Player(50, 300, P_SIZE + 10, P_SIZE, get_random(30, 90), get_random(30, 90), get_random(30, 90));
+	e = new Actor(VP_WIDTH-50, 300, P_SIZE + 10, P_SIZE);
+	floor = new Wall(0, VP_HEIGHT/2+100, 30, 5, 20, 20, true, 20); //see draw for reasoning on floor fix
 	
 	
 	//bullet = new Bullet(p.pos.x, p.pos.y, 10, 10, p);
@@ -306,24 +397,57 @@ function paint_assets() {
 	wall.draw_floor();
 	floor.draw_floor();
 	for (let i=0; i < bullet_ls.length; i++) {
-		bullet_ls[i].draw_actor();
+		if (bullet_ls[i].destroyed == false) {
+			bullet_ls[i].draw_actor();
+		}
+		else {
+			Matter.Composite.remove(floor.composite, bullet_ls[i].block_to_destroy);
+			let floor_arr = Matter.Composite.allBodies(floor.composite);
+			floor_arr[bullet_ls[i].block_idx] = "";
+			//console.log(bullet_ls[i].block_to_destroy);
+			//Matter.Composite.remove(composite, object
+			bullet_ls.splice(i, 1);
+		}
 	}
-	
 }
 
-function wall_block() {
-	//prevents player crossing border
-if (p.pos.x + p.w/2 > VP_WIDTH/2) {
-	p.pos.x = VP_WIDTH/2 - p.w/2;
+function draw_score() { 
+	rectMode(CENTER);
+	let c = color('white');
+	fill(c);
+	textSize(50);
+	let text_to_display = p_score + " - " + e_score
+	text(text_to_display, 50, 50);
+}
+function frameCalcs() {
+	//p.player_wall_check();
+	p.wall_check(-5, false, wall);
+	//p.wall_check(-5, false, floor);
+	//p.wall_check(5, false, floor);
+	e.move_rand();
+	e.wall_check(5);
+	for (let i=0; i < bullet_ls.length; i++) {
+		bullet_ls[i].collide(wall);
+		bullet_ls[i].collide(floor);
 	}
+	cooldown--;
+	e_cooldown--;
+	if (p.pos.y > VP_HEIGHT) {
+		console.log("enemy winner lol");
+		e_score++;
+	}
+	if (e.pos.y > VP_HEIGHT) {
+		p_score++;
+	}
+	
 }
 
 function draw() {
 	//a 'p5' defined function that runs automatically and continously (up to your system's hardware/os limit) and based on any specified frame rate
 	//Matter.Body.setAngle(p.body, 0); //this stops the player from spinning in the pyhsics engine thus fixing the floor issue and allowing collison to hold up the actor. 
-	wall_block();
-	e.move_rand();
+	frameCalcs();
 	Matter.Engine.update(engine);
 	paint_background();
 	paint_assets();
+	draw_score();
 }
