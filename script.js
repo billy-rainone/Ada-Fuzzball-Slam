@@ -214,7 +214,12 @@ class Actor {
 				break;
 			case (8):
 				//move right
-				this.pos.x++;
+				if (this.pos.x++ >= VP_WIDTH) {
+					this.pos.x--;
+				}
+				else {
+					this.pos.x++;
+				}
 				break;
 			case (7):
 				//shoot
@@ -305,7 +310,12 @@ class Player extends Actor{
 		//move the player a set amount(amt) in a set direction(dir).
 		//dir will take either "x" or "y" and amt will take any number, pos or neg to allow for all the directions.
 		if (dir == "x") {
+			if (this.pos.x + amt <= 0) {
+				this.pos.x -= amt;
+			}
+			else {
 			this.pos.x += amt;
+			}
 		}
 		else {
 			this.pos.y += amt; 
